@@ -23,8 +23,8 @@ runCommand("set -e")
 runCommand("set -x")
 
 command = "/usr/libexec/PlistBuddy -c "
-command += ":CFBundleVersion "
-command += "#{build_number} "
+command += "\"Set :CFBundleVersion "
+command += "#{build_number}\" "
 command += "\"#{plist_dir_file}\""
 runCommand(command)
 
