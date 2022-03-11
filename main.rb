@@ -116,6 +116,40 @@ def get_plist(params,target)
   return info_plist_path
 end
 
+def appstore_version
+  bundle_id = env_has_key('AC_BUNDLE_ID')
+  country = ENV['AC_APPSTORE_COUNTRY']
+  uri = if country
+          URI("http://itunes.apple.com/lookup?bundleId=#{bundle_id}&country=#{country}")
+        else
+          URI("http://itunes.apple.com/lookup?bundleId=#{bundle_id}")
+        end
+  response = Net::HTTP.get_response(uri)
+  puts('Unexpected status code from iTunes Search API') unless response.is_a?(Net::HTTPSuccess)
+  response_body = JSON.parse(response.body)
+  response_body['results'][0]['version']
+end
+
+def get_build_number(params, source)
+  case source
+  when 'xcode'
+    get_value_from_plist(params, 'CFBundleVersion')
+  when 'env'
+    env_has_key('AC_IOS_BUILD_NUMBER')
+  end
+end
+
+def get_version_number(params, source)
+  case source
+  when 'xcode'
+    get_value_from_plist(params, 'CFBundleShortVersionString')
+  when 'appstore'
+    appstore_version
+  when 'env'
+    env_has_key('AC_IOS_VERSION_NUMBER')
+  end
+end
+
 def get_value_from_plist(params,key)
     project = Xcodeproj::Project.open(params[:xcodeproj])
   
@@ -180,8 +214,8 @@ version_number_source = ENV['AC_VERSION_NUMBER_SOURCE'] # "xcode" #env #appstore
 
 omit_zero = ENV['AC_OMIT_ZERO_PATCH_VERSION'] || 'false' # true, false
 
-current_version_number = get_value_from_plist(params, 'CFBundleShortVersionString')
-current_build_number = get_value_from_plist(params, 'CFBundleVersion')
+current_version_number = get_build_number(params, build_number_source)
+current_build_number = get_version_number(params, version_number_source)
 
 puts "Current build: #{current_build_number}"
 puts "Current version: #{current_version_number}"
@@ -190,9 +224,16 @@ next_build_number = calculate_build_number(current_build_number, build_offset)
 puts "Next build: #{next_build_number} Reason -> offset: #{build_offset}"
 next_version_number = calculate_version_number(current_version_number, version_strategy, omit_zero, version_offset)
 puts "Next version: #{next_version_number}  Reason -> Strategy: #{version_strategy} Omit zero: #{omit_zero} Offset: #{version_offset} "
-increment_key(params, 'CFBundleVersion', next_build_number)
-increment_key(params, 'CFBundleShortVersionString', next_version_number)
-
+if next_build_number == current_build_number
+  puts "No need to change the build number"
+else
+  increment_key(params, 'CFBundleVersion', next_build_number)
+end
+if next_version_number == current_version_number
+  puts "No need to change the version number"
+else
+  increment_key(params, 'CFBundleShortVersionString', next_version_number)
+end
 current_version_number = get_value_from_plist(params, 'CFBundleShortVersionString')
 current_build_number = get_value_from_plist(params, 'CFBundleVersion')
 puts "Build number updated to: #{current_build_number}"
