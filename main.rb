@@ -62,7 +62,7 @@ end
 def increment_key(params,key,value)
     project = Xcodeproj::Project.open(params[:xcodeproj])
 
-    if params[:targets].nil?
+    if params[:targets].nil? || params[:targets].empty?
       # We will use all runnable apps and extensions.
       puts "Selecting only apps and extensions"
       project.native_targets.each do |target|
