@@ -197,6 +197,9 @@ def calculate_version_number(current_version, strategy, omit_zero,offset)
   version_array.pop if omit_zero
   version_array.join('.')
 end
+puts "Env variables"
+ENV.each { |name, value| puts "#{name} = #{value}" }
+puts "============================"
 
 scheme = env_has_key('AC_SCHEME')
 configuration = ENV['AC_CONFIGURATION_NAME']
@@ -214,8 +217,8 @@ version_number_source = ENV['AC_VERSION_NUMBER_SOURCE'] # "xcode" #env #appstore
 
 omit_zero = ENV['AC_OMIT_ZERO_PATCH_VERSION'] || 'false' # true, false
 
-current_version_number = get_build_number(params, build_number_source)
-current_build_number = get_version_number(params, version_number_source)
+current_build_number = get_build_number(params, build_number_source)
+current_version_number = get_version_number(params, version_number_source)
 
 puts "Current build: #{current_build_number}"
 puts "Current version: #{current_version_number}"
