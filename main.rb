@@ -46,7 +46,7 @@ def update_target(params,target,key,value)
   build_number = plist[key]
   # if the build number comes from a settings such as $MARKETING_VERSION or ${MARKETING_VERSION}
   if build_number =~ /\$\(([\w\-]+)\)/ || build_number =~ /\$\{([\w\-]+)\}/
-    puts "Update via config $(KEY): #{build_number} #{$1}"
+    puts "Update via config #{key}: #{build_number} #{$1}"
     target.build_configurations.each do |config|
       config.build_settings[$1] = value
     end
@@ -79,7 +79,7 @@ def increment_key(params,key,value)
     else
       # Select the targets by name
       puts "Selecting target(s) by name"
-      allowed_targets = params[:targets].split(',')
+      allowed_targets = params[:targets].split('|')
       project.native_targets.each do |target|
         if allowed_targets.include?(target.name)
           puts "Target: #{target.name}"
@@ -125,7 +125,7 @@ def appstore_version
           URI("http://itunes.apple.com/lookup?bundleId=#{bundle_id}")
         end
   response = Net::HTTP.get_response(uri)
-  puts('Unexpected status code from iTunes Search API') unless response.is_a?(Net::HTTPSuccess)
+  puts("Unexpected status code from iTunes Search API for bundle id: #{bundle_id} country: #{country}") unless response.is_a?(Net::HTTPSuccess)
   response_body = JSON.parse(response.body)
   response_body['results'][0]['version']
 end
@@ -212,10 +212,10 @@ build_offset = ENV['AC_BUILD_OFFSET'] || '1'
 version_offset = ENV['AC_VERSION_OFFSET'] || '0'
 
 version_strategy = ENV['AC_VERSION_STRATEGY'] # "keep"  major,minor, patch
-build_number_source = ENV['AC_BUILD_NUMBER_SOURCE'] # "xcode" #env
-version_number_source = ENV['AC_VERSION_NUMBER_SOURCE'] # "xcode" #env #appstore
+build_number_source = ENV['AC_BUILD_NUMBER_SOURCE'] || 'xcode' # "xcode" #env
+version_number_source = ENV['AC_VERSION_NUMBER_SOURCE'] || 'xcode' # "xcode" #env #appstore
 
-omit_zero = ENV['AC_OMIT_ZERO_PATCH_VERSION'] || 'false' # true, false
+omit_zero = ENV['AC_OMIT_ZERO_PATCH_VERSION'] == 'true' ? true : false
 
 current_build_number = get_build_number(params, build_number_source)
 current_version_number = get_version_number(params, version_number_source)
