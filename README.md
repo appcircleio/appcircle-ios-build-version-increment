@@ -17,7 +17,7 @@ This component bumps the version `$(MARKETING_VERSION)` and the build numbers `$
 
 ## Optional Input Variables
 
-- `$AC_CONFIGURATION_NAME`: Xcode Configuration to extract build number and version number. Default is the first target's Archive configuration
+- `$AC_IOS_CONFIGURATION_NAME`: Xcode Configuration to extract build number and version number. Default is the first target's Archive configuration
 - `$AC_TARGETS`: Name of the targets to update. You can separate multiple targets by comma. If you don't specify any target, all runnable targets will be updated.
 - `$AC_OMIT_ZERO_PATCH_VERSION`: If true omits zero in patch version(so 42.10.0 will become 42.10 and 42.10.1 will remain 42.10.1), default is `false`
 - `$AC_BUNDLE_ID`: If the build number source is `appstore`, this variable should have the bundle id of your application. Ex. `com.example.myapp`

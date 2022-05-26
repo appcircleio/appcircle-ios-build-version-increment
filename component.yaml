@@ -72,8 +72,8 @@ inputs:
     isRequired: false
     title: Targets
     description: Name of the targets to update. You can separate multiple targets by the pipe symbol. If you don't specify any target, all runnable targets will be updated.
-  - key: "AC_CONFIGURATION_NAME"
-    defaultValue: "$AC_CONFIGURATION_NAME"
+  - key: "AC_IOS_CONFIGURATION_NAME"
+    defaultValue: "$AC_IOS_CONFIGURATION_NAME"
     isRequired: false
     title: Configuration
     description: The build configuration to use. If you don't specify any configuration, the target's archive configuration will be used.
