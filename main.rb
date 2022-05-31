@@ -125,8 +125,11 @@ def get_plist(params,target)
     exit 1
   end
   repository_path = env_has_key('AC_REPOSITORY_DIR')
+  project_path = env_has_key('AC_PROJECT_PATH')
+  project_path = (Pathname.new repository_path).join(Pathname.new(project_path))
+  project_directory = File.dirname(project_path)
   info_plist = build_config.build_settings["INFOPLIST_FILE"]
-  info_plist_path = (Pathname.new repository_path).join(Pathname.new(info_plist))
+  info_plist_path = (Pathname.new project_directory).join(Pathname.new(info_plist))
   return info_plist_path
 end
 
