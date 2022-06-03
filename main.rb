@@ -150,7 +150,7 @@ end
 def get_build_number(params, source)
   case source
   when 'xcode'
-    get_value_from_plist(params, 'CFBundleVersion')
+    get_value_from_plist(params, 'CFBundleVersion','CURRENT_PROJECT_VERSION')
   when 'env'
     env_has_key('AC_IOS_BUILD_NUMBER')
   end
@@ -159,7 +159,7 @@ end
 def get_version_number(params, source)
   case source
   when 'xcode'
-    get_value_from_plist(params, 'CFBundleShortVersionString')
+    get_value_from_plist(params, 'CFBundleShortVersionString','MARKETING_VERSION')
   when 'appstore'
     appstore_version
   when 'env'
@@ -167,28 +167,29 @@ def get_version_number(params, source)
   end
 end
 
-def get_value_from_plist(params,key)
-    project = Xcodeproj::Project.open(params[:xcodeproj])
-  
-    target = project.targets.detect do |t|
-      t.is_a?(Xcodeproj::Project::Object::PBXNativeTarget) &&
-        t.product_type == 'com.apple.product-type.application'
-    end
+def get_value_from_plist(params,key,variable)
+  project = Xcodeproj::Project.open(params[:xcodeproj])
 
-    info_plist_path = get_plist(params,target)
-    plist = Xcodeproj::Plist.read_from_path(info_plist_path)
-
-    build_number = plist[key]
-    if build_number =~ /\$\(([\w\-]+)\)/
-      build_number = get_value_from_build_settings!(target, $1,  params[:configuration]) || get_value_from_build_settings!(project, $1,  params[:configuration])
-  
-    elsif build_number =~ /\$\{([\w\-]+)\}/
-      build_number = get_value_from_build_settings!(target, $1, params[:configuration]) || get_value_from_build_settings!(project, $1, params[:configuration])
-    end
-    build_number
-    
+  target = project.targets.detect do |t|
+    t.is_a?(Xcodeproj::Project::Object::PBXNativeTarget) &&
+      t.product_type == 'com.apple.product-type.application'
   end
-  
+
+  info_plist_path = get_plist(params,target)
+  plist = Xcodeproj::Plist.read_from_path(info_plist_path)
+
+  build_number = plist[key]
+  if build_number =~ /\$\(([\w\-]+)\)/
+    build_number = get_value_from_build_settings!(target, $1,  params[:configuration]) || get_value_from_build_settings!(project, $1,  params[:configuration])  
+  elsif build_number =~ /\$\{([\w\-]+)\}/
+    build_number = get_value_from_build_settings!(target, $1, params[:configuration]) || get_value_from_build_settings!(project, $1, params[:configuration])
+  elsif build_number.nil? && variable
+    puts "No build number in plist. Read from Xcode variable: #{variable}"
+    build_number = get_value_from_build_settings!(target, variable, params[:configuration]) || get_value_from_build_settings!(project, variable, params[:configuration])
+  end
+  build_number
+end
+
 def calculate_build_number(current_build_number, offset)
   build_array = current_build_number.split('.').map(&:to_i)
   build_array[-1] = build_array[-1] + offset.to_i
@@ -258,8 +259,8 @@ else
   increment_key(params, 'CFBundleShortVersionString', next_version_number)
 end
 
-current_version_number = get_value_from_plist(params, 'CFBundleShortVersionString')
-current_build_number = get_value_from_plist(params, 'CFBundleVersion')
+current_version_number = get_value_from_plist(params, 'CFBundleShortVersionString','MARKETING_VERSION')
+current_build_number = get_value_from_plist(params, 'CFBundleVersion','CURRENT_PROJECT_VERSION')
 puts "Build number updated to: #{current_build_number}"
 puts "Version number updated to: #{current_version_number}"
 
