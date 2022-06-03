@@ -121,7 +121,7 @@ def get_plist(params,target)
   if params[:configuration]
     build_config = target.build_configurations.detect { |c| c.name == params[:configuration] }
   else
-    puts "Configuration  #{params[:configuration]} not found"
+    puts "Configuration  #{params[:configuration]} not found. Make sure scheme is shared and configuration is present."
     exit 1
   end
   repository_path = env_has_key('AC_REPOSITORY_DIR')
@@ -216,8 +216,8 @@ def calculate_version_number(current_version, strategy, omit_zero,offset)
 end
 
 scheme = env_has_key('AC_SCHEME')
-configuration = get_env('AC_IOS_CONFIGURATION_NAME')
 params = {}
+params[:configuration] = get_env('AC_IOS_CONFIGURATION_NAME')
 params[:xcodeproj] = xcode_project_file
 params[:scheme] = scheme
 params[:targets] = get_env("AC_TARGETS")
