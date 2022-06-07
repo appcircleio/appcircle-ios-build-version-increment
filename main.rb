@@ -17,7 +17,7 @@ end
 def get_env(key)
   value = ENV[key]
   if !value.nil? && value != ''
-   return value.start_with?('X') ? ENV[value[1..-1]] : value
+   return value.start_with?('$') ? ENV[value[1..-1]] : value
   else
     return nil
   end
