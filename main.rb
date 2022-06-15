@@ -53,8 +53,16 @@ def runnable_target?(target)
   product_reference.path.end_with?('.app', '.appex')
 end
 
-def update_target(params,target,key,value)
+def update_target(params,target,key,value,variable)
   info_plist_path = get_plist(params,target)
+  if info_plist_path.nil?
+    puts "No plist found for target #{target.name} updating xcode project variable "
+    target.build_configurations.each do |config|
+      config.build_settings[variable] = value
+    end
+    return
+  end
+  
   plist = Xcodeproj::Plist.read_from_path(info_plist_path)
     
   build_number = plist[key]
@@ -73,7 +81,7 @@ def update_target(params,target,key,value)
 
 end
 
-def increment_key(params,key,value)
+def increment_key(params,key,value,variable)
     project = Xcodeproj::Project.open(params[:xcodeproj])
 
     if params[:targets].nil? || params[:targets].empty?
@@ -83,7 +91,7 @@ def increment_key(params,key,value)
         if runnable_target?(target)
           puts "Target: #{target.name}"
           # Update mechanism
-          update_target(params,target,key,value)
+          update_target(params,target,key,value,variable)
           else
             puts "Skipping target: #{target.name}"
         end
@@ -98,7 +106,7 @@ def increment_key(params,key,value)
         if allowed_targets.include?(target.name)
           puts "Target: #{target.name}"
             # Update mechanism
-            update_target(params,target,key,value)
+            update_target(params,target,key,value,variable)
           else
             puts "Skipping target: #{target.name}"
         end
@@ -129,6 +137,9 @@ def get_plist(params,target)
   project_path = (Pathname.new repository_path).join(Pathname.new(project_path))
   project_directory = File.dirname(project_path)
   info_plist = build_config.build_settings["INFOPLIST_FILE"]
+  if info_plist.nil?
+    return nil
+  end
   info_plist_path = (Pathname.new project_directory).join(Pathname.new(info_plist))
   return info_plist_path
 end
@@ -176,6 +187,12 @@ def get_value_from_plist(params,key,variable)
   end
 
   info_plist_path = get_plist(params,target)
+  if info_plist_path.nil?
+    puts "Can't read plist file. Read from Xcode variable: #{variable}"
+    build_number = get_value_from_build_settings!(target, variable, params[:configuration]) || get_value_from_build_settings!(project, variable, params[:configuration])
+    return build_number
+  end
+
   plist = Xcodeproj::Plist.read_from_path(info_plist_path)
 
   build_number = plist[key]
@@ -247,7 +264,7 @@ else
   current_build_number = get_build_number(params, build_number_source)
   next_build_number = calculate_build_number(current_build_number, build_offset)
   puts "Next build: #{next_build_number} Reason -> Source: #{build_number_source} offset: #{build_offset}"
-  increment_key(params, 'CFBundleVersion', next_build_number)
+  increment_key(params, 'CFBundleVersion', next_build_number,'CURRENT_PROJECT_VERSION')
 end 
 
 if version_number_source.nil? or version_strategy == 'keep'
@@ -256,7 +273,7 @@ else
   current_version_number = get_version_number(params, version_number_source)
   next_version_number = calculate_version_number(current_version_number, version_strategy, omit_zero, version_offset)
   puts "Next version: #{next_version_number}  Reason -> Source: #{version_number_source} Strategy: #{version_strategy} Omit zero: #{omit_zero} Offset: #{version_offset}"
-  increment_key(params, 'CFBundleShortVersionString', next_version_number)
+  increment_key(params, 'CFBundleShortVersionString', next_version_number,'MARKETING_VERSION')
 end
 
 current_version_number = get_value_from_plist(params, 'CFBundleShortVersionString','MARKETING_VERSION')
