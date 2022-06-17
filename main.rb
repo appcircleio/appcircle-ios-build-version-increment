@@ -54,6 +54,13 @@ def runnable_target?(target)
 end
 
 def update_target(params,target,key,value,variable)
+  # Update Xcode config if Xcode is generating the plist
+  target.build_configurations.each do |config|
+    if config.build_settings['GENERATE_INFOPLIST_FILE'] == 'YES'
+      config.build_settings[variable] = value
+    end
+  end
+  # If plist doesn't exist, update target with Xcode config
   info_plist_path = get_plist(params,target)
   if info_plist_path.nil?
     puts "No plist found for target #{target.name} updating xcode project variable "
@@ -65,7 +72,14 @@ def update_target(params,target,key,value,variable)
   
   plist = Xcodeproj::Plist.read_from_path(info_plist_path)
     
-  build_number = plist[key]
+  build_number = plist[key]  
+  if build_number.nil?
+    target.build_configurations.each do |config|
+      config.build_settings[variable] = value
+    end
+    return
+  end
+
   # if the build number comes from a settings such as $MARKETING_VERSION or ${MARKETING_VERSION}
   if build_number =~ /\$\(([\w\-]+)\)/ || build_number =~ /\$\{([\w\-]+)\}/
     puts "Update via config #{key}: #{build_number}"
