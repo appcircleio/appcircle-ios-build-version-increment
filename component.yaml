@@ -80,9 +80,11 @@ inputs:
 outputs:
   - key: "AC_IOS_NEW_BUILD_NUMBER"
     title: Changed build number
+    defaultValue: "AC_IOS_NEW_BUILD_NUMBER"
     description: Changed build number that is written to the project.
   - key: "AC_IOS_NEW_VERSION_NUMBER"
     title: Changed version number
+    defaultValue: "AC_IOS_NEW_VERSION_NUMBER"
     description: Changed version number that is written to the project.
 processFilename: ruby
 processArguments: '%AC_STEP_TEMP%/main.rb'
