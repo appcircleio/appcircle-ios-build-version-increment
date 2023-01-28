@@ -144,7 +144,7 @@ def get_plist(params,target)
     build_config = target.build_configurations.detect { |c| c.name == params[:configuration] }
   else
     puts "Configuration  #{params[:configuration]} not found. Make sure scheme is shared and configuration is present."
-    exit 1
+    exit 0
   end
   repository_path = env_has_key('AC_REPOSITORY_DIR')
   project_path = env_has_key('AC_PROJECT_PATH')
@@ -263,7 +263,8 @@ version_number_source =  get_env('AC_VERSION_NUMBER_SOURCE') # xcode, appstore, 
 
 omit_zero = get_env('AC_OMIT_ZERO_PATCH_VERSION') == 'true' ? true : false
 
-xcode_build_number = get_build_number(params, 'xcode')
+begin
+  xcode_build_number = get_build_number(params, 'xcode')
 xcode_version_number = get_version_number(params, 'xcode')
 
 puts "Current build: #{xcode_build_number}"
@@ -302,3 +303,7 @@ open(ENV['AC_ENV_FILE_PATH'], 'a') { |f|
 }
 
 exit 0
+rescue StandardError => e
+  puts "Your project is not compatible. Project is not updated. \nError: #{e} "
+  exit 0
+end
