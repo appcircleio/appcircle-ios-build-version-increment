@@ -282,8 +282,8 @@ else
   increment_key(params, 'CFBundleVersion', next_build_number,'CURRENT_PROJECT_VERSION')
 end 
 
-if version_number_source.nil? or version_strategy == 'keep'
-  puts "No version number source specified or strategy is keep. Skipping version number update"
+if version_number_source.nil? and version_strategy == 'keep'
+  puts "No version number source specified and strategy is keep. Skipping version number update"
 else
   current_version_number = get_version_number(params, version_number_source)
   next_version_number = calculate_version_number(current_version_number, version_strategy, omit_zero, version_offset)
