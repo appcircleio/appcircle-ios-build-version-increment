@@ -4,6 +4,7 @@ require 'xcodeproj'
 require 'json'
 require 'net/http'
 require 'plist'
+require 'colored'
 
 def env_has_key(key)
   value = ENV[key]
@@ -63,7 +64,7 @@ def update_target(params,target,key,value,variable)
   # If plist doesn't exist, update target with Xcode config
   info_plist_path = get_plist(params,target)
   if info_plist_path.nil?
-    puts "No plist found for target #{target.name} updating xcode project variable "
+    puts "Warning: No plist found for target '#{target.name}'. Updating the Xcode project variable.".yellow
     target.build_configurations.each do |config|
       config.build_settings[variable] = value
     end
@@ -88,7 +89,7 @@ def update_target(params,target,key,value,variable)
     end
 
   else
-    puts "Direct update to Info.plist: #{build_number}"
+    puts "Directly updating 'Info.plist' with the value: '#{build_number}'."
     plist[key] = value
     Xcodeproj::Plist.write_to_path(plist, info_plist_path)
   end
@@ -143,8 +144,7 @@ def get_plist(params,target)
   if params[:configuration]
     build_config = target.build_configurations.detect { |c| c.name == params[:configuration] }
   else
-    puts "Configuration  #{params[:configuration]} not found. Make sure scheme is shared and configuration is present."
-    exit 0
+    abort("Error: Configuration not found. Please ensure the scheme is shared and the correct configuration is specified.".red)
   end
   repository_path = env_has_key('AC_REPOSITORY_DIR')
   project_path = env_has_key('AC_PROJECT_PATH')
@@ -152,6 +152,7 @@ def get_plist(params,target)
   project_directory = File.dirname(project_path)
   info_plist = build_config.build_settings["INFOPLIST_FILE"]
   if info_plist.nil?
+    puts "Warning: The 'Info.plist' file is not specified in the build settings for target '#{target.name}'.".yellow
     return nil
   end
   info_plist_path = (Pathname.new project_directory).join(Pathname.new(info_plist))
@@ -167,7 +168,7 @@ def appstore_version
           URI("http://itunes.apple.com/lookup?bundleId=#{bundle_id}")
         end
   response = Net::HTTP.get_response(uri)
-  puts("Unexpected status code from iTunes Search API for bundle id: #{bundle_id} country: #{country}") unless response.is_a?(Net::HTTPSuccess)
+  abort("Error: Received an unexpected status code from the iTunes Search API for bundle ID '#{bundle_id}' and country '#{country}'.".red) unless response.is_a?(Net::HTTPSuccess)
   response_body = JSON.parse(response.body)
   response_body['results'][0]['version']
 end
@@ -202,7 +203,7 @@ def get_value_from_plist(params,key,variable)
 
   info_plist_path = get_plist(params,target)
   if info_plist_path.nil?
-    puts "Can't read plist file. Read from Xcode variable: #{variable}"
+    puts "Warning: Unable to read 'Info.plist' file. Attempting to retrieve value from Xcode variable '#{variable}'.".yellow
     build_number = get_value_from_build_settings!(target, variable, params[:configuration]) || get_value_from_build_settings!(project, variable, params[:configuration])
     return build_number
   end
@@ -215,7 +216,7 @@ def get_value_from_plist(params,key,variable)
   elsif build_number =~ /\$\{([\w\-]+)\}/
     build_number = get_value_from_build_settings!(target, $1, params[:configuration]) || get_value_from_build_settings!(project, $1, params[:configuration])
   elsif build_number.nil? && variable
-    puts "No build number in plist. Read from Xcode variable: #{variable}"
+    puts "Warning: No value for '#{key}' was found in 'Info.plist'. Attempting to retrieve the value from the Xcode variable '#{variable}'.".yellow
     build_number = get_value_from_build_settings!(target, variable, params[:configuration]) || get_value_from_build_settings!(project, variable, params[:configuration])
   end
   build_number
@@ -260,50 +261,62 @@ version_offset =  get_env('AC_VERSION_OFFSET') || 0
 version_strategy = get_env('AC_VERSION_STRATEGY') || 'keep' # "keep"  major,minor, patch
 build_number_source = get_env('AC_BUILD_NUMBER_SOURCE') # xcode, env
 version_number_source =  get_env('AC_VERSION_NUMBER_SOURCE') # xcode, appstore, env
+ac_env_build_number = get_env('AC_BUILD_NUMBER')
 
 omit_zero = get_env('AC_OMIT_ZERO_PATCH_VERSION') == 'true' ? true : false
 
 begin
-  xcode_build_number = get_build_number(params, 'xcode')
-xcode_version_number = get_version_number(params, 'xcode')
+  if version_number_source.nil? && build_number_source.nil?
+    abort("Error: No version or build number source specified. Please set the version or build number in the Build Configuration.".red)
+  else
+    xcode_build_number = get_build_number(params, 'xcode')
+    xcode_version_number = get_version_number(params, 'xcode')
 
-puts "Current build: #{xcode_build_number}"
-puts "Current version: #{xcode_version_number}"
+    puts "Project Build Number: #{xcode_build_number}"
+    puts "Project Version Number: #{xcode_version_number}"
+    puts "Appcircle Build Number: #{ac_env_build_number}"
 
-next_build_number = xcode_build_number
-next_version_number = xcode_version_number
+    next_build_number = xcode_build_number
+    next_version_number = xcode_version_number
 
-if build_number_source.nil?
-  puts "No build number source specified. Skipping build number update"
-else
-  current_build_number = get_build_number(params, build_number_source)
-  next_build_number = calculate_build_number(current_build_number, build_offset)
-  puts "Next build: #{next_build_number} Reason -> Source: #{build_number_source} offset: #{build_offset}"
-  increment_key(params, 'CFBundleVersion', next_build_number,'CURRENT_PROJECT_VERSION')
-end 
+    if build_number_source.nil?
+      puts "Warning: No build number source specified. Skipping the build number update. If you want to update the build number, please set it in the Build Configuration.".yellow.bold
+    else
+      current_build_number = get_build_number(params, build_number_source)
+      next_build_number = calculate_build_number(current_build_number, build_offset)
+      puts "Next build: #{next_build_number} Reason -> Source: #{build_number_source} offset: #{build_offset}"
+      increment_key(params, 'CFBundleVersion', next_build_number,'CURRENT_PROJECT_VERSION')
+      current_build_number = get_value_from_plist(params, 'CFBundleVersion','CURRENT_PROJECT_VERSION')
+    end 
 
-if version_number_source.nil? or version_strategy == 'keep'
-  puts "No version number source specified or strategy is keep. Skipping version number update"
-else
-  current_version_number = get_version_number(params, version_number_source)
-  next_version_number = calculate_version_number(current_version_number, version_strategy, omit_zero, version_offset)
-  puts "Next version: #{next_version_number}  Reason -> Source: #{version_number_source} Strategy: #{version_strategy} Omit zero: #{omit_zero} Offset: #{version_offset}"
-  increment_key(params, 'CFBundleShortVersionString', next_version_number,'MARKETING_VERSION')
-end
+    if version_number_source.nil?
+      puts "Warning: No version number source specified. Skipping the version number update. If you want to update the version number, please set it in the Build Configuration.".yellow.bold
+    else
+      current_version_number = get_version_number(params, version_number_source)
+      if version_strategy == 'keep'
+        next_version_number = current_version_number
+      else
+        next_version_number = calculate_version_number(current_version_number, version_strategy, omit_zero, version_offset)
+      end
+      puts "Next version: #{next_version_number}  Reason -> Source: #{version_number_source} Strategy: #{version_strategy} Omit zero: #{omit_zero} Offset: #{version_offset}"
+      increment_key(params, 'CFBundleShortVersionString', next_version_number,'MARKETING_VERSION')
+      current_version_number = get_value_from_plist(params, 'CFBundleShortVersionString','MARKETING_VERSION')
+    end
 
-current_version_number = get_value_from_plist(params, 'CFBundleShortVersionString','MARKETING_VERSION')
-current_build_number = get_value_from_plist(params, 'CFBundleVersion','CURRENT_PROJECT_VERSION')
-puts "Build number updated to: #{current_build_number}"
-puts "Version number updated to: #{current_version_number}"
+    puts "Build number updated to: #{current_build_number}" if build_number_source
+    puts "Version number updated to: #{current_version_number}" if version_number_source
 
 
-open(ENV['AC_ENV_FILE_PATH'], 'a') { |f|
-  f.puts "AC_IOS_NEW_BUILD_NUMBER=#{next_build_number}"
-  f.puts "AC_IOS_NEW_VERSION_NUMBER=#{next_version_number}"
-}
+    open(ENV['AC_ENV_FILE_PATH'], 'a') { |f|
+      f.puts "AC_IOS_NEW_BUILD_NUMBER=#{next_build_number}"
+      f.puts "AC_IOS_NEW_VERSION_NUMBER=#{next_version_number}"
+    }
 
-exit 0
+    puts "The process for Build and Version number increment has been completed successfully.".green.bold
+
+    exit 0
+  end
 rescue StandardError => e
-  puts "Your project is not compatible. Project is not updated. \nError: #{e} "
-  exit 0
+  puts "Error: Your project is not compatible for version upgrade. Project is not updated. \nDetails: #{e} ".red
+  exit 1
 end
