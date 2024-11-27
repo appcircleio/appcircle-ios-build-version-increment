@@ -269,19 +269,16 @@ begin
   if version_number_source.nil? && build_number_source.nil?
     abort("Error: No version or build number source specified. Please set the version or build number in the Build Configuration.".red)
   else
-    xcode_build_number = get_build_number(params, 'xcode')
-    xcode_version_number = get_version_number(params, 'xcode')
-
-    puts "Project Build Number: #{xcode_build_number}"
-    puts "Project Version Number: #{xcode_version_number}"
-    puts "Appcircle Build Number: #{ac_env_build_number}"
-
-    next_build_number = xcode_build_number
-    next_version_number = xcode_version_number
-
+    
     if build_number_source.nil?
       puts "Warning: No build number source specified. Skipping the build number update. If you want to update the build number, please set it in the Build Configuration.".yellow.bold
     else
+      xcode_build_number = get_build_number(params, 'xcode')
+      puts "Project Build Number: #{xcode_build_number}"
+      puts "Appcircle Build Number: #{ac_env_build_number}" if build_number_source == 'env'
+      next_build_number = xcode_build_number
+
+      puts "Updating the Build number.".blue
       current_build_number = get_build_number(params, build_number_source)
       next_build_number = calculate_build_number(current_build_number, build_offset)
       puts "Next build: #{next_build_number} Reason -> Source: #{build_number_source} offset: #{build_offset}"
@@ -292,6 +289,11 @@ begin
     if version_number_source.nil?
       puts "Warning: No version number source specified. Skipping the version number update. If you want to update the version number, please set it in the Build Configuration.".yellow.bold
     else
+      xcode_version_number = get_version_number(params, 'xcode')
+      puts "Project Version Number: #{xcode_version_number}"
+      next_version_number = xcode_version_number
+
+      puts "Updating the Version number.".blue
       current_version_number = get_version_number(params, version_number_source)
       if version_strategy == 'keep'
         next_version_number = current_version_number
@@ -303,8 +305,8 @@ begin
       current_version_number = get_value_from_plist(params, 'CFBundleShortVersionString','MARKETING_VERSION')
     end
 
-    puts "Build number updated to: #{current_build_number}" if build_number_source
-    puts "Version number updated to: #{current_version_number}" if version_number_source
+    puts "Build number updated to: #{current_build_number}".blue if build_number_source
+    puts "Version number updated to: #{current_version_number}".blue if version_number_source
 
 
     open(ENV['AC_ENV_FILE_PATH'], 'a') { |f|
