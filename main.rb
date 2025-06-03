@@ -89,7 +89,7 @@ def update_target(params,target,key,value,variable)
     end
 
   else
-    puts "Directly updating 'Info.plist' with the value: '#{build_number}'."
+    puts "Directly updating 'Info.plist' with the value: '#{build_number}'.".blue
     plist[key] = value
     Xcodeproj::Plist.write_to_path(plist, info_plist_path)
   end
@@ -319,6 +319,6 @@ begin
     exit 0
   end
 rescue StandardError => e
-  puts "Error: Your project is not compatible for version upgrade. Project is not updated. \nDetails: #{e} ".red
-  exit 1
+  abort("Error: Your project is not compatible for version upgrade. Project is not updated. \nDetails: #{e} ".red)
+  
 end
