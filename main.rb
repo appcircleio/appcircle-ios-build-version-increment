@@ -261,13 +261,15 @@ version_offset =  get_env('AC_VERSION_OFFSET') || 0
 version_strategy = get_env('AC_VERSION_STRATEGY') || 'keep' # "keep"  major,minor, patch
 build_number_source = get_env('AC_BUILD_NUMBER_SOURCE') # xcode, env
 version_number_source =  get_env('AC_VERSION_NUMBER_SOURCE') # xcode, appstore, env
-ac_env_build_number = get_env('AC_BUILD_NUMBER')
+ac_env_build_number = get_env('AC_IOS_BUILD_NUMBER')
 
 omit_zero = get_env('AC_OMIT_ZERO_PATCH_VERSION') == 'true' ? true : false
 
 begin
   if version_number_source.nil? && build_number_source.nil?
-    abort("Error: No version or build number source specified. Please set the version or build number in the Build Configuration.".red)
+    puts "Error: No version or build number source specified. Please set the version or build number increment strategy in the Build Configuration.".red
+    puts "Skipping this step..".red
+    exit 0
   else
     
     if build_number_source.nil?
@@ -283,7 +285,7 @@ begin
       next_build_number = calculate_build_number(current_build_number, build_offset)
       puts "Next build: #{next_build_number} Reason -> Source: #{build_number_source} offset: #{build_offset}"
       increment_key(params, 'CFBundleVersion', next_build_number,'CURRENT_PROJECT_VERSION')
-      current_build_number = get_value_from_plist(params, 'CFBundleVersion','CURRENT_PROJECT_VERSION')
+      puts "Build number updated to: #{next_build_number}".blue
     end 
 
     if version_number_source.nil?
@@ -302,16 +304,13 @@ begin
       end
       puts "Next version: #{next_version_number}  Reason -> Source: #{version_number_source} Strategy: #{version_strategy} Omit zero: #{omit_zero} Offset: #{version_offset}"
       increment_key(params, 'CFBundleShortVersionString', next_version_number,'MARKETING_VERSION')
-      current_version_number = get_value_from_plist(params, 'CFBundleShortVersionString','MARKETING_VERSION')
+      puts "Version number updated to: #{next_version_number}".blue
     end
-
-    puts "Build number updated to: #{current_build_number}".blue if build_number_source
-    puts "Version number updated to: #{current_version_number}".blue if version_number_source
 
 
     open(ENV['AC_ENV_FILE_PATH'], 'a') { |f|
-      f.puts "AC_IOS_NEW_BUILD_NUMBER=#{next_build_number}"
-      f.puts "AC_IOS_NEW_VERSION_NUMBER=#{next_version_number}"
+      f.puts "AC_IOS_NEW_BUILD_NUMBER=#{next_build_number}" if next_build_number
+      f.puts "AC_IOS_NEW_VERSION_NUMBER=#{next_version_number}" if next_version_number
     }
 
     puts "The process for Build and Version number increment has been completed successfully.".green.bold
