@@ -296,7 +296,7 @@ begin
       next_version_number = xcode_version_number
 
       puts "Updating the Version number.".blue
-      current_version_number = get_version_number(params, version_number_source)
+      current_version_number = version_number_source == 'xcode' ? xcode_version_number : get_version_number(params, version_number_source)
       if version_strategy == 'keep'
         next_version_number = current_version_number
       else
