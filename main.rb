@@ -281,7 +281,7 @@ begin
       next_build_number = xcode_build_number
 
       puts "Updating the Build number.".blue
-      current_build_number = get_build_number(params, build_number_source)
+      current_build_number = build_number_source == 'xcode' ? xcode_build_number : get_build_number(params, build_number_source)
       next_build_number = calculate_build_number(current_build_number, build_offset)
       puts "Next build: #{next_build_number} Reason -> Source: #{build_number_source} offset: #{build_offset}"
       increment_key(params, 'CFBundleVersion', next_build_number,'CURRENT_PROJECT_VERSION')
