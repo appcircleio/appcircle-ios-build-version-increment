@@ -162,19 +162,25 @@ end
 def appstore_version
   bundle_id = env_has_key('AC_BUNDLE_ID')
   country = get_env('AC_APPSTORE_COUNTRY')
-  uri = if country
-          puts "Fetching version from App Store for Bundle Identifier: #{bundle_id} and country: #{country}"
-          URI("https://itunes.apple.com/lookup?bundleId=#{bundle_id}&country=#{country}")
-        else
-          puts "Fetching version from App Store for Bundle Identifier: #{bundle_id}"
-          URI("https://itunes.apple.com/lookup?bundleId=#{bundle_id}")
-        end
-  response = Net::HTTP.get_response(uri)
-  abort("Error: Received an unexpected status code from the iTunes Search API for Bundle Identifier '#{bundle_id}' and country '#{country}'. Please ensure the Bundle Identifier is correct and the app is available in the App Store or the specified country.".red) unless response.is_a?(Net::HTTPSuccess)
-  response_body = JSON.parse(response.body)
 
-  if response_body['resultCount'].to_i == 0 || response_body['results'].nil? || response_body['results'].empty?
-    abort("Error: No app was found on the App Store for Bundle Identifier '#{bundle_id}'#{country ? " in country '#{country}'" : ''}. Please verify that the Bundle Identifier is correct and that the app is publicly available.".red)
+  puts "Fetching version from App Store for Bundle Identifier: #{bundle_id}" + (country ? " and country: #{country}" : "")
+  url = "https://itunes.apple.com/lookup?bundleId=#{bundle_id}"
+  url += "&country=#{country}" if country
+  uri = URI(url)
+  response = Net::HTTP.get_response(uri)
+  abort(
+    "Error: Received an unexpected status code from the iTunes Search API " \
+    "for Bundle Identifier '#{bundle_id}' and country '#{country}'. " \
+    "Please ensure the Bundle Identifier is correct and the app is available " \
+    "in the App Store or the specified country.".red
+  ) unless response.is_a?(Net::HTTPSuccess)
+  response_body = JSON.parse(response.body)
+  results = response_body['results'].to_a
+  if response_body['resultCount'].to_i == 0 || results.empty?
+    message = "Error: No app was found on the App Store for Bundle Identifier '#{bundle_id}'"
+    message += " in country '#{country}'" if country
+    message += ". Please verify that the Bundle Identifier is correct and that the app is publicly available."
+    abort(message.red)
   end
   response_body['results'][0]['version']
 end
