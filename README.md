@@ -32,3 +32,18 @@ This component bumps the version `$(MARKETING_VERSION)` and the build numbers `$
 ## Credits
 
 [Versioning fastlane Plugin](https://github.com/SiarheiFedartsou/fastlane-plugin-versioning)
+
+## Running tests
+
+Requires the [RSpec](https://rspec.info) gem plus the `xcodeproj`, `plist` and `colored` gems the
+step itself uses, and the Ruby standard library (Coverage, Open3). No Gemfile or Bundler needed.
+
+```bash
+ruby test/test_main.rb
+```
+
+The suite never touches the network or the Xcode toolchain. `appstore_version` runs against a
+stubbed `Net::HTTP` response, and the `increment_key` / `get_value_from_plist` tests build a real
+throwaway `.xcodeproj` inside a temp dir with the pure-Ruby `xcodeproj` gem. The `ENV` validation
+and end-to-end cases run `main.rb` in a subprocess with a fully controlled environment. A coverage
+report for `main.rb` is printed at the end of each run.

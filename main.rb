@@ -1,6 +1,10 @@
 require 'open3'
 require 'pathname'
-require 'xcodeproj'
+begin
+  require 'xcodeproj'
+rescue LoadError
+  # xcodeproj not available; Xcodeproj-dependent functions will fail at runtime
+end
 require 'json'
 require 'net/http'
 require 'plist'
@@ -260,6 +264,8 @@ def calculate_version_number(current_version, strategy, omit_zero,offset)
   version_array.join('.')
 end
 
+if __FILE__ == $PROGRAM_NAME
+
 scheme = env_has_key('AC_SCHEME')
 params = {}
 params[:configuration] = get_env('AC_IOS_CONFIGURATION_NAME')
@@ -320,7 +326,7 @@ begin
     end
 
 
-    open(ENV['AC_ENV_FILE_PATH'], 'a') { |f|
+    open(env_has_key('AC_ENV_FILE_PATH'), 'a') { |f|
       f.puts "AC_IOS_NEW_BUILD_NUMBER=#{next_build_number}" if next_build_number
       f.puts "AC_IOS_NEW_VERSION_NUMBER=#{next_version_number}" if next_version_number
     }
@@ -333,3 +339,6 @@ rescue StandardError => e
   abort("Error: Your project is not compatible for version upgrade. Project is not updated. \nDetails: #{e} ".red)
   
 end
+
+end # if __FILE__ == $PROGRAM_NAME
+
